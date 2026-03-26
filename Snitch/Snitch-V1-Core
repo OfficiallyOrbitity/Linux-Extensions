@@ -1,0 +1,133 @@
+#!/bin/bash
+
+PROCESS_NAME=$1
+
+if [ -z "$PROCESS_NAME" ]; then
+    echo "Usage: sudo snitch {process_name}"
+    exit 1
+fi
+
+# Find ALL matching PIDs
+PIDS=($(pgrep -f "$PROCESS_NAME"))
+
+if [ ${#PIDS[@]} -gt 0 ]; then
+    echo "Processes found:"
+    
+    for i in "${!PIDS[@]}"; do
+        CMD=$(ps -p ${PIDS[$i]} -o args=)
+        echo "$((i+1))) PID: ${PIDS[$i]} | $CMD"
+    done
+
+    echo ""
+    read -p "Select process number: " selection
+
+    INDEX=$((selection-1))
+    PID=${PIDS[$INDEX]}
+
+    if [ -z "$PID" ]; then
+        echo "Invalid selection."
+        exit 1
+    fi
+
+    echo ""
+    echo "Selected PID: $PID"
+    echo "Choose an option:"
+    echo "1) Kill"
+    echo "2) Ignore"
+    echo "3) Restart"
+    read -p "Enter choice: " choice
+
+    case $choice in
+        1)
+            sudo kill $PID
+            echo "Process killed."
+            ;;
+        2)
+            echo "Ignoring process."
+            ;;
+        3)
+            echo "Attempting smart restart..."
+
+            # 🔍 Check if it's a systemd service
+            SERVICE=$(systemctl list-units --type=service --all | grep -i "$PROCESS_NAME" | awk '{print $1}' | head -n 1)
+
+            if [ -n "$SERVICE" ]; then
+                echo "Detected system service: $SERVICE"
+                sudo systemctl restart "$SERVICE"
+                echo "Service restarted."
+            else
+                # Get original command
+                CMD=$(ps -p $PID -o args=)
+
+                if [ -z "$CMD" ]; then
+                    echo "Could not determine how to restart process."
+                    exit 1
+                fi
+
+                echo "Original command:"
+                echo "$CMD"
+
+                sudo kill $PID
+                echo "Restarting process..."
+
+                nohup bash -c "$CMD" >/dev/null 2>&1 &
+
+                echo "Process restarted."
+            fi
+            ;;
+        *)
+            echo "Invalid option."
+            ;;
+    esac
+
+else
+    echo "No process found with name: $PROCESS_NAME"
+    echo "Choose an option:"
+    echo "1) End"
+    echo "2) Enter PID manually"
+    read -p "Enter choice: " choice
+
+    case $choice in
+        1)
+            echo "Exiting."
+            ;;
+        2)
+            read -p "Enter PID: " PID_INPUT
+
+            if ps -p $PID_INPUT > /dev/null; then
+                echo "Process exists."
+                echo "1) Kill"
+                echo "2) Restart"
+                read -p "Enter choice: " subchoice
+
+                case $subchoice in
+                    1)
+                        sudo kill $PID_INPUT
+                        echo "Process killed."
+                        ;;
+                    2)
+                        CMD=$(ps -p $PID_INPUT -o args=)
+
+                        if [ -z "$CMD" ]; then
+                            echo "Cannot determine restart command."
+                            exit 1
+                        fi
+
+                        echo "Restarting..."
+                        sudo kill $PID_INPUT
+                        nohup bash -c "$CMD" >/dev/null 2>&1 &
+                        echo "Process restarted."
+                        ;;
+                    *)
+                        echo "Invalid option."
+                        ;;
+                esac
+            else
+                echo "Invalid PID."
+            fi
+            ;;
+        *)
+            echo "Invalid option."
+            ;;
+    esac
+fi
