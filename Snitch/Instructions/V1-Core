@@ -1,0 +1,46 @@
+🚀 Snitch V1 — Installation Guide
+
+Install Snitch in seconds using wget.
+
+📥 Quick Install (Recommended)
+
+Run this command in your terminal:
+
+sudo wget -O /usr/local/bin/snitch https://raw.githubusercontent.com/OfficiallyOrbitity/Linux-Extensions/refs/heads/deb/Snitch/Snitch-V1-Core
+🔑 Make it Executable
+sudo chmod +x /usr/local/bin/snitch
+✅ Verify Installation
+snitch --help
+
+or try:
+
+sudo snitch python
+📦 Requirements
+
+Make sure you have:
+
+bash
+wget
+systemctl (systemd-based systems)
+
+Install wget if needed:
+
+sudo apt install wget -y
+📂 Where it installs
+/usr/local/bin/snitch
+
+This means you can run it from anywhere:
+
+sudo snitch <process_name>
+❌ Uninstall
+sudo rm /usr/local/bin/snitch
+⚠️ Notes
+Requires sudo for process control
+Works with:
+Normal processes (python, node, etc.)
+System services (auto-detected)
+Restart may not work for all processes (depends on how they were launched)
+💡 Example Usage
+sudo snitch python
+sudo snitch nginx
+sudo snitch cockpit
